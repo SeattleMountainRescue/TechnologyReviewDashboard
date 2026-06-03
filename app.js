@@ -19,7 +19,7 @@ const INITIAL_INITIATIVES = [
             "Linda investigating Salesforce bulk update",
             "Nick setup GitHub Repo for tech team"
         ],
-        blockers: "Blocked: Respond access. Need: Salesforce automation method",
+        blockers: "Blocked: Respond access\nNeed: Salesforce automation method",
         nextSteps: [
             { text: "Finalize app V1 feature set", completed: false },
             { text: "Conduct formal beta test", completed: false }
@@ -163,6 +163,25 @@ const OWNER_AVATARS = {
     "Nasa": "#14b8a6"     // Teal
 };
 
+// Define Tech Area category styling colors
+const TECH_THEMES = {
+    "Membership & Base Operations Management": {
+        bg: "rgba(99, 102, 241, 0.12)",
+        color: "#c7d2fe",
+        border: "rgba(99, 102, 241, 0.3)"
+    },
+    "Training & Operations Support": {
+        bg: "rgba(20, 184, 166, 0.12)",
+        color: "#99f6e4",
+        border: "rgba(20, 184, 166, 0.3)"
+    },
+    "Organization Support": {
+        bg: "rgba(236, 72, 153, 0.12)",
+        color: "#fbcfe8",
+        border: "rgba(236, 72, 153, 0.3)"
+    }
+};
+
 // 2. Global State Storage Manager
 class DashboardState {
     constructor() {
@@ -193,6 +212,7 @@ class DashboardState {
 
         // KPI quick-filter: null | 'active' | 'blocked'
         this.kpiFilter = null;
+        this.tableResizersInitialized = false;
     }
 
     loadFromStorage() {
@@ -495,24 +515,36 @@ class DashboardState {
             `).join("");
             const statusDisplay = item.status.length > 0 ? `<div class="card-status-list" style="gap: 0.2rem;">${statusHtml}</div>` : `<span class="text-muted">—</span>`;
 
-            // 3. Render Needs/Blockers alert
+            // 3. Render Needs/Blockers alert (multi-line supported)
             const hasBlockers = item.blockers && 
                                 item.blockers.toLowerCase() !== "none" && 
                                 item.blockers.toLowerCase() !== "n/a" &&
                                 item.blockers.trim() !== "";
-            const blockerDisplay = hasBlockers ? `
-                <div class="card-blocker-alert" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <span>${item.blockers}</span>
-                </div>
-            ` : `<span class="text-success" style="font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem;">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-teal);"><polyline points="20 6 9 17 4 12"/></svg>
-                None
-            </span>`;
+            let blockerDisplay;
+            if (hasBlockers) {
+                const blockerLines = item.blockers.split("\n").map(l => l.trim()).filter(l => l !== "");
+                blockerDisplay = `
+                    <div class="table-blockers-container" style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 160px;">
+                        ${blockerLines.map(line => `
+                            <div class="card-blocker-alert" style="font-size: 0.75rem; padding: 0.4rem 0.6rem; margin: 0; display: flex; align-items: flex-start; gap: 0.35rem;">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0; margin-top: 1px;">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                                <span style="text-align: left; line-height: 1.3;">${line}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                `;
+            } else {
+                blockerDisplay = `
+                    <span class="text-success" style="font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem;">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-teal);"><polyline points="20 6 9 17 4 12"/></svg>
+                        None
+                    </span>
+                `;
+            }
 
             // 4. Render Actions next-steps checklist
             const actionsHtml = item.nextSteps ? item.nextSteps.map((step, idx) => `
@@ -540,9 +572,13 @@ class DashboardState {
                 </div>
             ` : `<span class="text-muted">—</span>`;
 
+            const techTheme = TECH_THEMES[item.techArea] || { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)", color: "#ffffff" };
+
             tr.innerHTML = `
                 <td>
-                    <div class="table-tech-area">${item.techArea}</div>
+                    <span class="tech-badge" style="--tech-bg: ${techTheme.bg}; --tech-color: ${techTheme.color}; --tech-border: ${techTheme.border}">
+                        ${item.techArea}
+                    </span>
                 </td>
                 <td>
                     <a class="table-title" href="#" data-id="${item.id}">${item.initiative}</a>
@@ -553,7 +589,7 @@ class DashboardState {
                     </span>
                 </td>
                 <td>
-                    <div style="display: flex; gap: 0.25rem;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
                         ${item.owners.map(o => `
                             <span class="owner-avatar" style="--avatar-bg: ${OWNER_AVATARS[o] || '#475569'}" title="${o}">
                                 ${o.charAt(0)}
@@ -594,6 +630,76 @@ class DashboardState {
             }
 
             tbody.appendChild(tr);
+        });
+
+        // Initialize drag resize grab handles once table is drawn and visible in the DOM
+        if (!this.tableResizersInitialized) {
+            this.initTableResizable();
+            this.tableResizersInitialized = true;
+        }
+    }
+
+    /* Resizable Column Grab Handles Implementation */
+    initTableResizable() {
+        const table = document.querySelector(".table-dense");
+        if (!table) return;
+
+        const cols = table.querySelectorAll("thead th");
+        if (cols.length === 0) return;
+
+        // Capture actual initial sizes from live DOM elements to start
+        const widths = Array.from(cols).map(col => col.getBoundingClientRect().width);
+
+        // Turn table-layout fixed so cell sizes adhere strictly to style.width changes
+        table.style.tableLayout = "fixed";
+
+        cols.forEach((col, index) => {
+            col.style.width = widths[index] + "px";
+
+            // Inject the resizer drag handle
+            const resizer = document.createElement("div");
+            resizer.className = "col-resizer";
+            col.appendChild(resizer);
+
+            let startX = 0;
+            let startWidth = 0;
+
+            const onMouseDown = (e) => {
+                startX = e.pageX;
+                startWidth = col.getBoundingClientRect().width;
+
+                resizer.classList.add("resizing");
+                document.body.style.cursor = "col-resize";
+                document.body.style.userSelect = "none";
+
+                const onMouseMove = (moveEvt) => {
+                    const width = startWidth + (moveEvt.pageX - startX);
+                    if (width > 60) {
+                        col.style.width = width + "px";
+                    }
+                };
+
+                const onMouseUp = () => {
+                    resizer.classList.remove("resizing");
+                    document.body.style.cursor = "";
+                    document.body.style.userSelect = "";
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                };
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            };
+
+            // Stop click events on resize handle from triggering sorting
+            resizer.addEventListener("mousedown", (e) => {
+                e.stopPropagation();
+                onMouseDown(e);
+            });
+
+            resizer.addEventListener("click", (e) => {
+                e.stopPropagation();
+            });
         });
     }
 
@@ -652,15 +758,19 @@ class DashboardState {
                 `).join("")}
             </div>
 
-            <!-- Warning block alert if active -->
+            <!-- Warning block alert if active (multi-line supported) -->
             ${hasBlockers ? `
-                <div class="card-blocker-alert">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <span>${item.blockers}</span>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%;">
+                    ${item.blockers.split("\n").map(l => l.trim()).filter(l => l !== "").map(line => `
+                        <div class="card-blocker-alert" style="margin: 0; display: flex; align-items: flex-start; gap: 0.35rem;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0; margin-top: 2px;">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            <span style="text-align: left; line-height: 1.3;">${line}</span>
+                        </div>
+                    `).join("")}
                 </div>
             ` : ""}
 
