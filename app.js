@@ -2,142 +2,8 @@
    SMR TECHNOLOGY REVIEW DASHBOARD - APPLICATION CONTROLLER
    ========================================================================== */
 
-// 1. Initial High-Fidelity Data extracted from the SMR Technology Review PPTX
-const INITIAL_INITIATIVES = [
-    {
-        id: "init-pika",
-        techArea: "Membership & Base Operations Management",
-        initiative: "SMR Project Pika (app)",
-        dependencies: ["Respond Data Access", "D4H Data Access", "Salesforce Access", "GitHub Repo Publish"],
-        owners: ["Garth", "Nick", "Barton", "David", "Linda"],
-        state: "Build",
-        description: "SMR app that centralizes mission/event response, mission mgt, and member resources",
-        cost: "$0",
-        status: [
-            "Matt C. confirmed Response access",
-            "Nick created D4H API / Magda testing",
-            "Linda investigating Salesforce bulk update",
-            "Nick setup GitHub Repo for tech team"
-        ],
-        blockers: "Blocked: Respond access\nNeed: Salesforce automation method",
-        nextSteps: [
-            { text: "Finalize app V1 feature set", completed: false },
-            { text: "Conduct formal beta test", completed: false }
-        ]
-    },
-    {
-        id: "init-lola",
-        techArea: "Membership & Base Operations Management",
-        initiative: "Lola Agent",
-        dependencies: ["N/A"],
-        owners: ["Nick", "Nasa"],
-        state: "Build",
-        description: "AI agent that will help automate various aspect of mission spin-up and after-action analysis",
-        cost: "$0",
-        status: ["Nasa currently building app", "Timeline: TBD"],
-        blockers: "Timeline: TBD",
-        nextSteps: [
-            { text: "Setup conversational core pipelines", completed: false },
-            { text: "Develop after-action analysis schema", completed: false }
-        ]
-    },
-    {
-        id: "init-azure",
-        techArea: "Membership & Base Operations Management",
-        initiative: "Azure Subscription Renewal",
-        dependencies: ["N/A"],
-        owners: ["Nick"],
-        state: "Complete",
-        description: "Receive $2K annual grant with Microsoft Elevate Nonprofit Customer Support",
-        cost: "$0",
-        status: ["Grant applied for and received"],
-        blockers: "None",
-        nextSteps: [
-            { text: "Submit nonprofit grant verification", completed: true },
-            { text: "Apply credit balance to production workloads", completed: true }
-        ]
-    },
-    {
-        id: "init-report",
-        techArea: "Training & Operations Support",
-        initiative: "Enhanced Report Collection & Analysis",
-        dependencies: ["Mission Metadata Req'ts", "AI-friendly Report Collection", "AI-friendly Analysis Engine"],
-        owners: ["Barton"],
-        state: "Design",
-        description: "Automate collection and analysis of mission data using AI functionality",
-        cost: "$0",
-        status: ["Initial mission metadata reports generated for review"],
-        blockers: "None",
-        nextSteps: [
-            { text: "Define formal metadata fields with leadership team", completed: false },
-            { text: "Review first batch of mock reporting formats", completed: false }
-        ]
-    },
-    {
-        id: "init-satellite",
-        techArea: "Training & Operations Support",
-        initiative: "T-Satellite in 2nd Command Vehicle",
-        dependencies: ["T-Mobile Phones"],
-        owners: ["Raquel"],
-        state: "Prioritize",
-        description: "Investigate adding T-Mobile T-Sat SIM card to the new truck",
-        cost: "TBD",
-        status: ["Awaiting fleet coordinator assessment"],
-        blockers: "Need: Monthly T-Sat service budget",
-        nextSteps: [
-            { text: "Obtain service cost structure from T-Mobile rep", completed: false },
-            { text: "Submit budget proposal to treasury board", completed: false }
-        ]
-    },
-    {
-        id: "init-exos",
-        techArea: "Training & Operations Support",
-        initiative: "Hypershell Exoskeletons Evaluation",
-        dependencies: ["N/A"],
-        owners: ["Wes"],
-        state: "Launch",
-        description: "Evaluate use of Hypershell X exos for SAR missions",
-        cost: "$0",
-        status: ["Evaluation period completed 5/28"],
-        blockers: "None",
-        nextSteps: [
-            { text: "Summarize field tester feedback", completed: false },
-            { text: "Prepare devices for active SAR support", completed: false }
-        ]
-    },
-    {
-        id: "init-litter",
-        techArea: "Training & Operations Support",
-        initiative: "Bimotal Elevate Litter Wheel Motor Evaluation",
-        dependencies: ["Cascade Litter Handles"],
-        owners: ["Wes"],
-        state: "Investigate",
-        description: "Evaluate use of electric motor for Cascade Rescue Terra Tamer wheel",
-        cost: "$0",
-        status: ["Eval agreement signed/sent to Bimotal"],
-        blockers: "None",
-        nextSteps: [
-            { text: "Receive motor hardware (TBD)", completed: false },
-            { text: "Develop structured engineering test plan", completed: false }
-        ]
-    },
-    {
-        id: "init-social",
-        techArea: "Organization Support",
-        initiative: "Social Media Markdown Files",
-        dependencies: ["N/A"],
-        owners: ["Nick", "Raquel"],
-        state: "Complete",
-        description: "Leverage markdown file for consistent social media posts",
-        cost: "$0",
-        status: ["Nick created and handed-off markdown file to Raquel"],
-        blockers: "None",
-        nextSteps: [
-            { text: "Create unified layout patterns", completed: true },
-            { text: "Raquel to start using file for actual operations", completed: false }
-        ]
-    }
-];
+const STORAGE_KEY = "smr_dashboard_initiatives";
+const DATA_JSON_PATH = "./data.json";
 
 // Define state colors for visual mapping
 const STATE_THEMES = {
@@ -185,7 +51,7 @@ const TECH_THEMES = {
 // 2. Global State Storage Manager
 class DashboardState {
     constructor() {
-        this.initiatives = this.loadFromStorage();
+        this.initiatives = [];
         this.currentView = "table";
         this.searchQuery = "";
         
@@ -216,23 +82,71 @@ class DashboardState {
     }
 
     loadFromStorage() {
-        const stored = localStorage.getItem("smr_dashboard_initiatives");
-        if (stored) {
-            try {
-                return JSON.parse(stored);
-            } catch (e) {
-                console.error("Error reading dashboard data from local storage", e);
-            }
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+            return null;
         }
-        // Save initial seed data to local storage on first load
-        localStorage.setItem("smr_dashboard_initiatives", JSON.stringify(INITIAL_INITIATIVES));
-        return JSON.parse(JSON.stringify(INITIAL_INITIATIVES));
+
+        try {
+            return JSON.parse(stored);
+        } catch (e) {
+            console.error("Error reading dashboard data from local storage", e);
+            return null;
+        }
+    }
+
+    async initialize() {
+        const stored = this.loadFromStorage();
+        if (stored) {
+            this.initiatives = stored;
+            return;
+        }
+
+        try {
+            const response = await fetch(DATA_JSON_PATH, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error(`Failed to load ${DATA_JSON_PATH} (${response.status})`);
+            }
+
+            const json = await response.json();
+            if (!Array.isArray(json)) {
+                throw new Error("Loaded data.json is not an array");
+            }
+
+            this.initiatives = json;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(json));
+        } catch (error) {
+            console.error("Unable to initialize dashboard data from data.json", error);
+            this.initiatives = [];
+        }
     }
 
     save() {
-        localStorage.setItem("smr_dashboard_initiatives", JSON.stringify(this.initiatives));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.initiatives));
         this.updateKPIs();
         this.render();
+    }
+
+    exportToJsonFile(filename = "data.json") {
+        const jsonString = JSON.stringify(this.initiatives, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    importFromJson(data) {
+        if (!Array.isArray(data)) {
+            throw new Error("Imported JSON must be an array of initiatives.");
+        }
+
+        this.initiatives = data;
+        this.save();
     }
 
     // Mutators
@@ -1349,10 +1263,35 @@ function setKpiFilter(filterType) {
 }
 
 // Page Initialization
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await store.initialize();
     initCustomDropdowns();
     store.updateKPIs();
     store.render();
+
+    document.getElementById("btn-export-json").addEventListener("click", () => {
+        store.exportToJsonFile();
+    });
+
+    document.getElementById("btn-import-json").addEventListener("click", () => {
+        document.getElementById("json-import-input").click();
+    });
+
+    document.getElementById("json-import-input").addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            store.importFromJson(json);
+        } catch (error) {
+            console.error(error);
+            alert("Unable to import the JSON file. Please make sure the file contains a valid array of initiatives.");
+        } finally {
+            event.target.value = "";
+        }
+    });
 
     // Wire up KPI card clicks
     document.getElementById("kpi-active").addEventListener("click", () => setKpiFilter("active"));
