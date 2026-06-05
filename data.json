@@ -1,0 +1,261 @@
+[
+  {
+    "id": "init-pika",
+    "techArea": "Membership & Base Operations Management",
+    "initiative": "SMR Project Pika (app)",
+    "dependencies": [
+      "Respond Data Access",
+      "D4H Data Access",
+      "Salesforce Access",
+      "GitHub Repo Publish"
+    ],
+    "owners": [
+      "Garth",
+      "Nick",
+      "Barton",
+      "David",
+      "Linda"
+    ],
+    "state": "Build",
+    "description": "SMR app that centralizes mission/event response, mission mgt, and member resources",
+    "cost": "$0",
+    "status": [
+      "5/29/26",
+      "- Matt C. confirmed Response",
+      "- Nick created D4H API / Magda testing",
+      "- Linda investigating Salesforce bulk update",
+      "- Nick setup GitHub Repo for tech team"
+    ],
+    "blockers": "Blocked: Respond access\nNeed: Salesforce automation method",
+    "nextSteps": [
+      {
+        "text": "Finalize app V1 feature set",
+        "completed": false
+      },
+      {
+        "text": "Conduct formal beta test",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-lola",
+    "techArea": "Membership & Base Operations Management",
+    "initiative": "Lola Agent",
+    "dependencies": [
+      "N/A"
+    ],
+    "owners": [
+      "Nick",
+      "Nasa"
+    ],
+    "state": "Build",
+    "description": "AI agent that will help automate various aspect of mission spin-up and after-action analysis",
+    "cost": "$0",
+    "status": [
+      "Nasa currently building app",
+      "Timeline: TBD"
+    ],
+    "blockers": "Timeline: TBD",
+    "nextSteps": [
+      {
+        "text": "Setup conversational core pipelines",
+        "completed": false
+      },
+      {
+        "text": "Develop after-action analysis schema",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-azure",
+    "techArea": "Membership & Base Operations Management",
+    "initiative": "Azure Subscription Renewal",
+    "dependencies": [
+      "N/A"
+    ],
+    "owners": [
+      "Nick"
+    ],
+    "state": "Complete",
+    "description": "Receive $2K annual grant with Microsoft Elevate Nonprofit Customer Support",
+    "cost": "$0",
+    "status": [
+      "Grant applied for and received"
+    ],
+    "blockers": "None",
+    "nextSteps": [
+      {
+        "text": "Submit nonprofit grant verification",
+        "completed": true
+      },
+      {
+        "text": "Apply credit balance to production workloads",
+        "completed": true
+      }
+    ]
+  },
+  {
+    "id": "init-report",
+    "techArea": "Training & Operations Support",
+    "initiative": "Enhanced Report Collection & Analysis",
+    "dependencies": [
+      "Mission Metadata Req'ts",
+      "AI-friendly Report Collection",
+      "AI-friendly Analysis Engine"
+    ],
+    "owners": [
+      "Barton"
+    ],
+    "state": "Design",
+    "description": "Automate collection and analysis of mission data using AI functionality",
+    "cost": "$0",
+    "status": [
+      "Initial mission metadata reports generated for review"
+    ],
+    "blockers": "None",
+    "nextSteps": [
+      {
+        "text": "Define formal metadata fields with leadership team",
+        "completed": false
+      },
+      {
+        "text": "Review first batch of mock reporting formats",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-satellite",
+    "techArea": "Training & Operations Support",
+    "initiative": "T-Satellite in 2nd Command Vehicle",
+    "dependencies": [
+      "T-Mobile Phones"
+    ],
+    "owners": [
+      "Raquel"
+    ],
+    "state": "Prioritize",
+    "description": "Investigate adding T-Mobile T-Sat SIM card to the new truck",
+    "cost": "TBD",
+    "status": [
+      "Awaiting fleet coordinator assessment"
+    ],
+    "blockers": "Need: Monthly T-Sat service budget",
+    "nextSteps": [
+      {
+        "text": "Obtain service cost structure from T-Mobile rep",
+        "completed": false
+      },
+      {
+        "text": "Submit budget proposal to treasury board",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-exos",
+    "techArea": "Training & Operations Support",
+    "initiative": "Hypershell Exoskeletons Evaluation",
+    "dependencies": [
+      "N/A"
+    ],
+    "owners": [
+      "Wes"
+    ],
+    "state": "Launch",
+    "description": "Evaluate use of Hypershell X exos for SAR missions",
+    "cost": "$0",
+    "status": [
+      "Evaluation period completed 5/28"
+    ],
+    "blockers": "None",
+    "nextSteps": [
+      {
+        "text": "Summarize field tester feedback",
+        "completed": false
+      },
+      {
+        "text": "Prepare devices for active SAR support",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-litter",
+    "techArea": "Training & Operations Support",
+    "initiative": "Bimotal Elevate Litter Wheel Motor Evaluation",
+    "dependencies": [
+      "Cascade Litter Handles"
+    ],
+    "owners": [
+      "Wes"
+    ],
+    "state": "Investigate",
+    "description": "Evaluate use of electric motor for Cascade Rescue Terra Tamer wheel",
+    "cost": "$0",
+    "status": [
+      "Eval agreement signed/sent to Bimotal"
+    ],
+    "blockers": "None",
+    "nextSteps": [
+      {
+        "text": "Receive motor hardware (TBD)",
+        "completed": false
+      },
+      {
+        "text": "Develop structured engineering test plan",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-social",
+    "techArea": "Organization Support",
+    "initiative": "Social Media Markdown Files",
+    "dependencies": [
+      "N/A"
+    ],
+    "owners": [
+      "Nick",
+      "Raquel"
+    ],
+    "state": "Complete",
+    "description": "Leverage markdown file for consistent social media posts",
+    "cost": "$0",
+    "status": [
+      "Nick created and handed-off markdown file to Raquel"
+    ],
+    "blockers": "None",
+    "nextSteps": [
+      {
+        "text": "Create unified layout patterns",
+        "completed": true
+      },
+      {
+        "text": "Raquel to start using file for actual operations",
+        "completed": false
+      }
+    ]
+  },
+  {
+    "id": "init-1780680667263",
+    "initiative": "This is a Test Initiative",
+    "techArea": "Membership & Base Operations Management",
+    "state": "Prioritize",
+    "cost": "$0",
+    "description": "This is a test description for this initiative",
+    "owners": [
+      "Wes Cooper"
+    ],
+    "dependencies": [
+      "None"
+    ],
+    "status": [
+      "Trying to figure out why this is not updating"
+    ],
+    "blockers": "None",
+    "nextSteps": []
+  }
+]
