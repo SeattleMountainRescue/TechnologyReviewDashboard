@@ -1279,6 +1279,156 @@ a.table-title:hover {
     right: 0;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 10, 0.78);
+    backdrop-filter: blur(4px);
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.status-note-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    width: min(760px, calc(100% - 2rem));
+    max-height: calc(100% - 3rem);
+    background: #0d121f;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 30px 120px rgba(0, 0, 0, 0.5);
+    z-index: 1101;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem 1.35rem;
+    overflow: hidden;
+}
+
+.status-note-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.status-note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0.75rem;
+}
+
+.status-note-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: var(--text-primary);
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.75rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 0.25rem;
+    transition: var(--transition-smooth);
+}
+
+.btn-close-modal:hover {
+    color: var(--text-primary);
+}
+
+.status-note-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: auto;
+}
+
+.status-note-body textarea {
+    width: 100%;
+    min-height: 240px;
+    max-height: 420px;
+    background: #07101d;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    resize: vertical;
+    font: inherit;
+    line-height: 1.6;
+}
+
+.status-note-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.status-note-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.85rem;
+}
+
+.toolbar-btn {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: 0.65rem;
+    padding: 0.55rem 0.85rem;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.toolbar-btn:hover,
+.toolbar-btn:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    outline: none;
+}
+
+.status-note-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.status-note-link:hover {
+    text-decoration: underline;
+}
+
+.status-note-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 1rem;
+}
+
 .drawer-header {
     display: flex;
     justify-content: space-between;

@@ -158,7 +158,7 @@
                     </div>
                 </div>
                 <div class="view-switcher">
-                    <button class="view-btn active" data-view="grid" title="Grid View">
+                    <button class="view-btn" data-view="grid" title="Grid View">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="7" height="7"/>
                             <rect x="14" y="3" width="7" height="7"/>
@@ -175,7 +175,7 @@
                         </svg>
                         <span>Kanban</span>
                     </button>
-                    <button class="view-btn" data-view="table" title="Table View">
+                    <button class="view-btn active" data-view="table" title="Table View">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="8" y1="6" x2="21" y2="6"/>
                             <line x1="8" y1="12" x2="21" y2="12"/>
@@ -382,6 +382,32 @@
                 <button type="submit" class="btn btn-primary" id="btn-save-initiative">Save Initiative</button>
             </div>
         </form>
+    </div>
+
+    <!-- Status Note Modal -->
+    <div class="modal-overlay" id="status-note-overlay"></div>
+    <div class="status-note-modal" id="status-note-modal">
+        <div class="status-note-header">
+            <div>
+                <h2>Status Notes</h2>
+                <div id="status-note-initiative-title" style="font-size: 0.95rem; color: var(--text-muted);"></div>
+            </div>
+            <button class="btn-close-modal" id="btn-close-status-note" title="Close Overlay">&times;</button>
+        </div>
+        <div class="status-note-toolbar">
+            <button type="button" class="toolbar-btn" id="btn-format-bold" title="Bold"><strong>B</strong></button>
+            <button type="button" class="toolbar-btn" id="btn-format-italic" title="Italic"><em>I</em></button>
+            <button type="button" class="toolbar-btn" id="btn-format-bullet" title="Bullet list">• List</button>
+            <button type="button" class="toolbar-btn" id="btn-format-number" title="Numbered list">1. List</button>
+            <button type="button" class="toolbar-btn" id="btn-format-link" title="Insert hyperlink">🔗 Link</button>
+        </div>
+        <div class="status-note-body">
+            <textarea id="status-note-textarea" rows="10" placeholder="Edit the initiative status notes here..."></textarea>
+        </div>
+        <div class="status-note-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-status-note">Cancel</button>
+            <button type="button" class="btn btn-primary" id="btn-save-status-note">Save</button>
+        </div>
     </div>
 
     <!-- Application Script -->

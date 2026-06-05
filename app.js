@@ -186,7 +186,7 @@ const TECH_THEMES = {
 class DashboardState {
     constructor() {
         this.initiatives = this.loadFromStorage();
-        this.currentView = "grid";
+        this.currentView = "table";
         this.searchQuery = "";
         
         // Custom multi-select filter sets initialized with all options checked
@@ -207,7 +207,7 @@ class DashboardState {
         ];
 
         // Table sorting parameters
-        this.sortBy = "initiative";
+        this.sortBy = "techArea";
         this.sortDirection = "asc";
 
         // KPI quick-filter: null | 'active' | 'blocked'
@@ -392,6 +392,11 @@ class DashboardState {
             noResults.style.display = "none";
         }
 
+        // Keep the view buttons in sync with the current view state
+        document.querySelectorAll(".view-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.getAttribute("data-view") === this.currentView);
+        });
+
         // Branch by active view mode
         if (this.currentView === "grid") {
             document.getElementById("view-grid").style.display = "block";
@@ -507,13 +512,14 @@ class DashboardState {
             const depsDisplay = depsHtml.trim() !== "" ? `<div class="card-dependencies">${depsHtml}</div>` : `<span class="text-muted">—</span>`;
 
             // 2. Render Status list
-            const statusHtml = item.status.map(note => `
-                <div class="status-item" style="font-size: 0.75rem; margin-bottom: 0.25rem;">
-                    <span class="status-bullet" style="margin-top: 0.35rem; width: 4px; height: 4px;"></span>
-                    <span>${note}</span>
-                </div>
-            `).join("");
-            const statusDisplay = item.status.length > 0 ? `<div class="card-status-list" style="gap: 0.2rem;">${statusHtml}</div>` : `<span class="text-muted">—</span>`;
+            const statusTooltip = item.status.length > 0 ? item.status.join(" \n") : "Click to add status notes";
+            const statusLabel = item.status.length > 0 ? `${item.status.length} note${item.status.length === 1 ? "" : "s"}` : "Add status";
+            const statusDisplay = `
+                <a href="#" class="status-note-link" data-id="${item.id}" title="${statusTooltip}">
+                    <span class="status-note-icon">📝</span>
+                    <span>${statusLabel}</span>
+                </a>
+            `;
 
             // 3. Render Needs/Blockers alert (multi-line supported)
             const hasBlockers = item.blockers && 
@@ -617,6 +623,15 @@ class DashboardState {
                 e.preventDefault();
                 openDrawer(item.id);
             });
+
+            // Status note icon opens the status modal
+            const statusLink = tr.querySelector(".status-note-link");
+            if (statusLink) {
+                statusLink.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    openStatusNoteModal(item.id);
+                });
+            }
 
             // Hook interactive checklist click events in table
             if (nextStepsCount > 0) {
@@ -905,6 +920,106 @@ function closeDrawer() {
     document.body.style.overflow = ""; // restore background scroll
 }
 
+let activeStatusNoteInitiativeId = null;
+let statusNoteSelectionStart = 0;
+let statusNoteSelectionEnd = 0;
+
+function updateStatusNoteSelection() {
+    const textarea = document.getElementById("status-note-textarea");
+    if (!textarea) return;
+    statusNoteSelectionStart = textarea.selectionStart;
+    statusNoteSelectionEnd = textarea.selectionEnd;
+}
+
+function openStatusNoteModal(initiativeId) {
+    const item = store.initiatives.find(x => x.id === initiativeId);
+    if (!item) return;
+
+    activeStatusNoteInitiativeId = initiativeId;
+    document.getElementById("status-note-initiative-title").textContent = item.initiative;
+    document.getElementById("status-note-textarea").value = item.status.join("\n");
+    document.getElementById("status-note-overlay").classList.add("active");
+    document.getElementById("status-note-modal").classList.add("active");
+    document.body.style.overflow = "hidden";
+    const textarea = document.getElementById("status-note-textarea");
+    textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    updateStatusNoteSelection();
+}
+
+function closeStatusNoteModal() {
+    document.getElementById("status-note-overlay").classList.remove("active");
+    document.getElementById("status-note-modal").classList.remove("active");
+    document.body.style.overflow = "";
+    activeStatusNoteInitiativeId = null;
+}
+
+function getStatusNoteTextarea() {
+    return document.getElementById("status-note-textarea");
+}
+
+function wrapStatusSelection(before, after, placeholder) {
+    const textarea = getStatusNoteTextarea();
+    const value = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = value.slice(start, end) || placeholder || "";
+    const newValue = value.slice(0, start) + before + selected + after + value.slice(end);
+    textarea.value = newValue;
+    textarea.focus();
+    const cursorPos = start + before.length + selected.length + after.length;
+    textarea.setSelectionRange(cursorPos, cursorPos);
+}
+
+function applyStatusNoteFormat(type) {
+    const textarea = getStatusNoteTextarea();
+    if (!textarea) return;
+
+    const currentStart = textarea.selectionStart;
+    const currentEnd = textarea.selectionEnd;
+    const start = currentStart !== currentEnd ? Math.min(currentStart, currentEnd) : Math.min(statusNoteSelectionStart, statusNoteSelectionEnd);
+    const end = currentStart !== currentEnd ? Math.max(currentStart, currentEnd) : Math.max(statusNoteSelectionStart, statusNoteSelectionEnd);
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+
+    const value = textarea.value;
+    const selected = value.slice(start, end);
+
+    if (type === "bold") {
+        wrapStatusSelection("**", "**", "bold text");
+        return;
+    }
+    if (type === "italic") {
+        wrapStatusSelection("_", "_", "italic text");
+        return;
+    }
+    if (type === "bullet") {
+        const lines = selected ? selected.split("\n") : ["List item"];
+        const bulleted = lines.map(line => line.trim() ? `- ${line.trim()}` : "- ").join("\n");
+        textarea.value = value.slice(0, start) + bulleted + value.slice(end);
+        textarea.focus();
+        textarea.setSelectionRange(start, start + bulleted.length);
+        return;
+    }
+    if (type === "number") {
+        const lines = selected ? selected.split("\n") : ["List item"];
+        const numbered = lines.map((line, index) => `${index + 1}. ${line.trim()}`).join("\n");
+        textarea.value = value.slice(0, start) + numbered + value.slice(end);
+        textarea.focus();
+        textarea.setSelectionRange(start, start + numbered.length);
+        return;
+    }
+    if (type === "link") {
+        const url = window.prompt("Enter URL", "https://");
+        if (!url) return;
+        const linkText = selected || "link text";
+        const markdown = `[${linkText}](${url})`;
+        textarea.value = value.slice(0, start) + markdown + value.slice(end);
+        textarea.focus();
+        textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+    }
+}
+
 // 4. Form Event Listeners & Submission pipeline
 form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -980,6 +1095,47 @@ document.getElementById("btn-add-initiative").addEventListener("click", () => op
 document.getElementById("btn-close-drawer").addEventListener("click", closeDrawer);
 document.getElementById("btn-cancel-drawer").addEventListener("click", closeDrawer);
 overlay.addEventListener("click", closeDrawer);
+
+document.getElementById("btn-close-status-note").addEventListener("click", closeStatusNoteModal);
+document.getElementById("btn-cancel-status-note").addEventListener("click", closeStatusNoteModal);
+document.getElementById("status-note-overlay").addEventListener("click", closeStatusNoteModal);
+["btn-format-bold", "btn-format-italic", "btn-format-bullet", "btn-format-number", "btn-format-link"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.addEventListener("mousedown", (e) => {
+            updateStatusNoteSelection();
+            e.preventDefault();
+        });
+    }
+});
+const statusNoteTextarea = document.getElementById("status-note-textarea");
+if (statusNoteTextarea) {
+    ["mouseup", "keyup", "select", "focus"].forEach(evt => {
+        statusNoteTextarea.addEventListener(evt, updateStatusNoteSelection);
+    });
+}
+
+document.addEventListener("selectionchange", () => {
+    const textarea = document.getElementById("status-note-textarea");
+    if (document.activeElement === textarea) {
+        updateStatusNoteSelection();
+    }
+});
+document.getElementById("btn-format-bold").addEventListener("click", () => applyStatusNoteFormat("bold"));
+document.getElementById("btn-format-italic").addEventListener("click", () => applyStatusNoteFormat("italic"));
+document.getElementById("btn-format-bullet").addEventListener("click", () => applyStatusNoteFormat("bullet"));
+document.getElementById("btn-format-number").addEventListener("click", () => applyStatusNoteFormat("number"));
+document.getElementById("btn-format-link").addEventListener("click", () => applyStatusNoteFormat("link"));
+document.getElementById("btn-save-status-note").addEventListener("click", () => {
+    if (!activeStatusNoteInitiativeId) return;
+
+    const status = document.getElementById("status-note-textarea").value.split("\n")
+        .map(x => x.trim())
+        .filter(x => x !== "");
+
+    store.updateInitiative(activeStatusNoteInitiativeId, { status });
+    closeStatusNoteModal();
+});
 
 // View switches
 document.querySelectorAll(".view-btn").forEach(btn => {
