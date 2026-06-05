@@ -48,12 +48,163 @@ const TECH_THEMES = {
     }
 };
 
+function isDevModeDetected() {
+    const { protocol, hostname, href } = window.location;
+    const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname.startsWith("127.");
+    const isFileProtocol = protocol === "file:";
+    const hasDevBranchHint = href.includes("dashboard-dev");
+
+    return isFileProtocol || isLocalHost || hasDevBranchHint;
+}
+
+function injectDevModeBanner() {
+    if (!isDevModeDetected()) {
+        return;
+    }
+
+    const banner = document.createElement("div");
+    banner.className = "dev-mode-banner";
+    banner.textContent = "DEV MODE — Local Working Copy";
+    document.body.insertBefore(banner, document.body.firstChild);
+}
+
+const DEV_DATA_URL = "https://raw.githubusercontent.com/SeattleMountainRescue/TechnologyReviewDashboard/dashboard-dev/data.json";
+
+async function compareWithDevBranch() {
+    try {
+        // Skip warning on production GitHub Pages
+        const hostname = window.location.hostname || "";
+        if (hostname.includes("github.io")) return;
+        const localRaw = localStorage.getItem(STORAGE_KEY);
+        if (!localRaw) {
+            // No local data -> do not warn
+            return null;
+        }
+
+        const parsedLocal = JSON.parse(localRaw);
+        const localInitiatives = Array.isArray(parsedLocal) ? parsedLocal : (parsedLocal && Array.isArray(parsedLocal.initiatives) ? parsedLocal.initiatives : null);
+        if (!localInitiatives) return null;
+
+        const response = await fetch(DEV_DATA_URL, { cache: "no-store" });
+        if (!response.ok) {
+            // don't block the app on failed fetch; just skip
+            console.warn("Unable to fetch dev branch data for comparison", response.status);
+            return null;
+        }
+
+        const devData = await response.json();
+        const devInitiatives = Array.isArray(devData) ? devData : (devData && Array.isArray(devData.initiatives) ? devData.initiatives : null);
+        const devLastUpdated = devData && devData.lastUpdated ? devData.lastUpdated : null;
+        if (!devInitiatives) return devLastUpdated;
+
+        // Efficient comparison: compare initiatives arrays via JSON
+        if (JSON.stringify(localInitiatives) !== JSON.stringify(devInitiatives)) {
+            injectWarningBanner();
+        }
+
+        return devLastUpdated;
+    } catch (e) {
+        console.error("Error comparing local data with dev branch:", e);
+    }
+}
+
+function injectWarningBanner() {
+    // Avoid duplicate banner
+    if (document.querySelector('.warning-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.className = 'warning-banner';
+
+    const text = document.createElement('div');
+    text.className = 'warning-text';
+    text.textContent = 'Your local working copy is out of sync with the development data.json.';
+
+    const btnImport = document.createElement('button');
+    btnImport.className = 'btn-warning';
+    btnImport.textContent = 'Import Dev Version';
+    btnImport.addEventListener('click', () => {
+        // Reuse existing import flow (opens file picker)
+        const importBtn = document.getElementById('btn-import-json');
+        if (importBtn) importBtn.click();
+    });
+
+    const btnReset = document.createElement('button');
+    btnReset.className = 'btn-warning';
+    btnReset.textContent = 'Reset to Dev Version';
+    btnReset.addEventListener('click', async () => {
+        const confirmed = confirm('This will overwrite your local working copy with the development branch version. Continue?');
+        if (!confirmed) return;
+        try {
+            const resp = await fetch(DEV_DATA_URL, { cache: 'no-store' });
+            if (!resp.ok) throw new Error(`Failed to fetch dev data (${resp.status})`);
+            const json = await resp.json();
+            const data = Array.isArray(json) ? json : (json && Array.isArray(json.initiatives) ? json.initiatives : null);
+            if (!data) throw new Error('Dev data is not a valid initiatives array.');
+            // if dev JSON contains lastUpdated, preserve it by storing wrapped format in localStorage
+            if (json && json.lastUpdated) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastUpdated: json.lastUpdated, initiatives: data }));
+                store.lastUpdated = json.lastUpdated;
+            } else {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                store.lastUpdated = null;
+            }
+            store.initiatives = data;
+            store.updateKPIs();
+            store.render();
+            alert('Local data reset to dev version.');
+            // remove warning after reset
+            banner.remove();
+        } catch (err) {
+            console.error('Reset to dev version failed', err);
+            alert('Unable to reset to dev version.');
+        }
+    });
+
+    banner.appendChild(text);
+    banner.appendChild(btnImport);
+    banner.appendChild(btnReset);
+
+    // Place below dev-mode banner if present, otherwise at top
+    const devBanner = document.querySelector('.dev-mode-banner');
+    if (devBanner && devBanner.parentNode) {
+        devBanner.parentNode.insertBefore(banner, devBanner.nextSibling);
+    } else {
+        document.body.insertBefore(banner, document.body.firstChild);
+    }
+}
+
+function formatISOToDisplay(iso) {
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return null;
+
+        // Date in UTC for calendar date, and local Pacific Time for local clock
+        const utcDate = d.toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        const pacificTime = d.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Los_Angeles', timeZoneName: 'short' });
+        return `As of ${utcDate} — ${pacificTime}`;
+    } catch (e) {
+        return null;
+    }
+}
+
+function updateLastUpdatedUI(iso) {
+    const el = document.getElementById('meta-last-updated');
+    if (!el) return;
+    if (!iso) {
+        el.textContent = 'As of: Unknown';
+        return;
+    }
+    const formatted = formatISOToDisplay(iso);
+    el.textContent = formatted || 'As of: Unknown';
+}
+
 // 2. Global State Storage Manager
 class DashboardState {
     constructor() {
         this.initiatives = [];
         this.currentView = "table";
         this.searchQuery = "";
+        this.lastUpdated = null;
         
         // Custom multi-select filter sets initialized with all options checked
         this.selectedTechAreas = [
@@ -88,7 +239,19 @@ class DashboardState {
         }
 
         try {
-            return JSON.parse(stored);
+            const parsed = JSON.parse(stored);
+            // Support two formats: plain array, or { lastUpdated, initiatives }
+            if (Array.isArray(parsed)) {
+                this.lastUpdated = null;
+                return parsed;
+            }
+
+            if (parsed && Array.isArray(parsed.initiatives)) {
+                this.lastUpdated = parsed.lastUpdated || null;
+                return parsed.initiatives;
+            }
+
+            return null;
         } catch (e) {
             console.error("Error reading dashboard data from local storage", e);
             return null;
@@ -109,12 +272,19 @@ class DashboardState {
             }
 
             const json = await response.json();
-            if (!Array.isArray(json)) {
-                throw new Error("Loaded data.json is not an array");
+            // data.json may be either an array or an object { lastUpdated, initiatives }
+            if (Array.isArray(json)) {
+                this.initiatives = json;
+                this.lastUpdated = null;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(json));
+            } else if (json && Array.isArray(json.initiatives)) {
+                this.initiatives = json.initiatives;
+                this.lastUpdated = json.lastUpdated || null;
+                // keep localStorage backward-compatible by storing raw initiatives array
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(json.initiatives));
+            } else {
+                throw new Error("Loaded data.json is not a recognized format");
             }
-
-            this.initiatives = json;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(json));
         } catch (error) {
             console.error("Unable to initialize dashboard data from data.json", error);
             this.initiatives = [];
@@ -128,7 +298,11 @@ class DashboardState {
     }
 
     exportToJsonFile(filename = "data.json") {
-        const jsonString = JSON.stringify(this.initiatives, null, 2);
+        const exportObj = {
+            lastUpdated: new Date().toISOString(),
+            initiatives: this.initiatives
+        };
+        const jsonString = JSON.stringify(exportObj, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -141,12 +315,22 @@ class DashboardState {
     }
 
     importFromJson(data) {
-        if (!Array.isArray(data)) {
-            throw new Error("Imported JSON must be an array of initiatives.");
+        // Accept either raw array or wrapped { lastUpdated, initiatives }
+        if (Array.isArray(data)) {
+            this.lastUpdated = null;
+            this.initiatives = data;
+            this.save();
+            return;
         }
 
-        this.initiatives = data;
-        this.save();
+        if (data && Array.isArray(data.initiatives)) {
+            this.lastUpdated = data.lastUpdated || null;
+            this.initiatives = data.initiatives;
+            this.save();
+            return;
+        }
+
+        throw new Error("Imported JSON must be an array of initiatives or an object with an initiatives array.");
     }
 
     // Mutators
@@ -1264,7 +1448,12 @@ function setKpiFilter(filterType) {
 
 // Page Initialization
 document.addEventListener("DOMContentLoaded", async () => {
+    injectDevModeBanner();
     await store.initialize();
+    const devLast = await compareWithDevBranch();
+    // Prefer dev branch timestamp for the header if available, otherwise local storage value
+    const displayed = devLast || store.lastUpdated || null;
+    updateLastUpdatedUI(displayed);
     initCustomDropdowns();
     store.updateKPIs();
     store.render();
@@ -1277,6 +1466,43 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("json-import-input").click();
     });
 
+    document.getElementById("btn-reset-repo").addEventListener("click", async () => {
+        const confirmed = confirm("This will overwrite your local working copy with the version from the repo. Continue?");
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await fetch("https://raw.githubusercontent.com/SeattleMountainRescue/TechnologyReviewDashboard/main/data.json", { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error(`Failed to download repo data (${response.status})`);
+            }
+
+            const repoJson = await response.json();
+            const repoData = Array.isArray(repoJson) ? repoJson : (repoJson && Array.isArray(repoJson.initiatives) ? repoJson.initiatives : null);
+            if (!repoData) {
+                throw new Error("Repo data is not a valid initiatives array.");
+            }
+
+            if (repoJson && repoJson.lastUpdated) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastUpdated: repoJson.lastUpdated, initiatives: repoData }));
+                store.lastUpdated = repoJson.lastUpdated;
+            } else {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(repoData));
+                store.lastUpdated = null;
+            }
+
+            store.initiatives = repoData;
+            store.updateKPIs();
+            store.render();
+            updateLastUpdatedUI(store.lastUpdated);
+            alert("Local data reset to repo version.");
+        } catch (error) {
+            console.error("Reset to repo version failed", error);
+            alert("Unable to reset local data to repo version. Please try again.");
+        }
+    });
+
     document.getElementById("json-import-input").addEventListener("change", async (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -1285,6 +1511,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const text = await file.text();
             const json = JSON.parse(text);
             store.importFromJson(json);
+            updateLastUpdatedUI(store.lastUpdated);
         } catch (error) {
             console.error(error);
             alert("Unable to import the JSON file. Please make sure the file contains a valid array of initiatives.");
